@@ -26,33 +26,31 @@ import java.util.regex.Pattern;
 @Path("/weather")
 public class WeatherWebService {
     private double temperatureKelvin;
+    private DecimalFormat df = new DecimalFormat("###.##");;
 
-    public WeatherWebService() {
-        this.temperatureKelvin = getTempFromJson();;
+    {
+        try {
+            String json = fromJsonToString("http://api.openweathermap.org/data/2.5/weather?id=703448&appid=6fb8199d11676c9a54c773d3687bada8");
+            temperatureKelvin = getTempFromJson(json);
+        } catch (URISyntaxException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @GET
     @Produces("application/json")
     public Response showInKelvin() throws JSONException, URISyntaxException, IOException {
 
-        String json = fromJsonToString("http://api.openweathermap.org/data/2.5/weather?id=703448&appid=6fb8199d11676c9a54c773d3687bada8");
-
-
         JSONObject jsonObject = new JSONObject();
-
         jsonObject.put("kelvinKiev", temperatureKelvin );
-
         return Response.status(200).entity(jsonObject.toString()).build();
     }
-
-
 
     @Path("/fahrenheit")
     @GET
     @Produces("application/json")
     public Response fahrenheitTemperature() throws JSONException {
         JSONObject jsonObject = new JSONObject();
-        DecimalFormat df = new DecimalFormat("###.##");
         double fahrenheitKiev  = 9/5 * (temperatureKelvin - 273) + 32;
         jsonObject.put("fahrenheitKiev", df.format(fahrenheitKiev));
         return Response.status(200).entity(jsonObject.toString()).build();
@@ -63,7 +61,6 @@ public class WeatherWebService {
     @Produces("application/json")
     public Response celsiusTemperature() throws JSONException {
         JSONObject jsonObject = new JSONObject();
-        DecimalFormat df = new DecimalFormat("###.##");
         double celsiusKiev  = temperatureKelvin - 273;
         jsonObject.put("celsiusKiev", df.format(celsiusKiev));
         return Response.status(200).entity(jsonObject.toString()).build();
@@ -71,32 +68,27 @@ public class WeatherWebService {
 
 
     private String fromJsonToString(String link) throws URISyntaxException, IOException {
-        URI uri = new URI(link);
-        URL url = uri.toURL();
+        URL url = new URL(link);
         InputStream is = url.openStream();
         BufferedReader bufferedReader = new BufferedReader(
                 new InputStreamReader(is));
         StringBuilder sb = new StringBuilder();
-        String line = "";
+        String line;
         while((line = bufferedReader.readLine()) != null){
             sb.append(line);
         }
-        return line;
+        return sb.toString();
 
     }
 
-    private double getTempFromJson() {
+    private double getTempFromJson(String json) {
         String pattern = Pattern.quote("\"temp\":") + "(.*?)" + Pattern.quote(",\"pressure");
-
         Pattern patterObj = Pattern.compile(pattern);
-
-        Matcher match = patterObj.matcher("{\"coord\":{\"lon\":30.52,\"lat\":50.43},\"weather\":[{\"id\":800,\"main\":\"Clear\",\"description\":\"clear sky\",\"icon\":\"01d\"}],\"base\":\"stations\",\"main\":{\"temp\":264.49,\"pressure\":1024,\"humidity\":85,\"temp_min\":264.15,\"temp_max\":265.15},\"visibility\":10000,\"wind\":{\"speed\":3,\"deg\":270},\"clouds\":{\"all\":0},\"dt\":1480492800,\"sys\":{\"type\":1,\"id\":7358,\"message\":0.0026,\"country\":\"UA\",\"sunrise\":1480484157,\"sunset\":1480514243},\"id\":703448,\"name\":\"Kiev\",\"cod\":200}");
-
+        Matcher match = patterObj.matcher(json);
         if (match.find()) {
             return Double.parseDouble(match.group(1));
         }
         return -1;
     }
-
 }
 
